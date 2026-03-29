@@ -435,10 +435,11 @@ If they choose A:
 Say: "Running /office-hours inline. Once the design doc is ready, I'll pick up
 the review right where we left off."
 
-Read the office-hours skill file from disk using the Read tool:
-`~/.claude/skills/gstack/office-hours/SKILL.md`
+Read the `/office-hours` skill file at `~/.claude/skills/gstack/office-hours/SKILL.md` using the Read tool.
 
-Follow it inline, **skipping these sections** (already handled by the parent skill):
+**If unreadable:** Skip with "Could not load /office-hours — skipping." and continue.
+
+Follow its instructions from top to bottom, **skipping these sections** (already handled by the parent skill):
 - Preamble (run first)
 - AskUserQuestion Format
 - Completeness Principle — Boil the Lake
@@ -446,9 +447,13 @@ Follow it inline, **skipping these sections** (already handled by the parent ski
 - Contributor Mode
 - Completion Status Protocol
 - Telemetry (run last)
+- Step 0: Detect platform and base branch
+- Review Readiness Dashboard
+- Plan File Review Report
+- Prerequisite Skill Offer
+- Plan Status Footer
 
-If the Read fails (file not found), say:
-"Could not load /office-hours — proceeding with standard review."
+Execute every other section at full depth. When the loaded skill's instructions are complete, continue with the next step below.
 
 After /office-hours completes, re-run the design doc check:
 ```bash
