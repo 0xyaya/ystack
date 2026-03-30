@@ -8,7 +8,7 @@ description: |
   scanning, plus OWASP Top 10, STRIDE threat modeling, and active verification.
   Two modes: daily (zero-noise, 8/10 confidence gate) and comprehensive (monthly deep
   scan, 2/10 bar). Trend tracking across audit runs.
-  Use when: "security audit", "threat model", "pentest review", "OWASP", "CSO review".
+  Use when: "security audit", "threat model", "pentest review", "OWASP", "CSO review". (gstack)
 allowed-tools:
   - Bash
   - Read
@@ -30,7 +30,7 @@ _UPD=$(~/.claude/skills/gstack/bin/gstack-update-check 2>/dev/null || .claude/sk
 mkdir -p ~/.gstack/sessions
 touch ~/.gstack/sessions/"$PPID"
 _SESSIONS=$(find ~/.gstack/sessions -mmin -120 -type f 2>/dev/null | wc -l | tr -d ' ')
-find ~/.gstack/sessions -mmin +120 -type f -delete 2>/dev/null || true
+find ~/.gstack/sessions -mmin +120 -type f -exec rm {} + 2>/dev/null || true
 _PROACTIVE=$(~/.claude/skills/gstack/bin/gstack-config get proactive 2>/dev/null || echo "true")
 _PROACTIVE_PROMPTED=$([ -f ~/.gstack/.proactive-prompted ] && echo "yes" || echo "no")
 _BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")

@@ -3,8 +3,10 @@ name: ship
 preamble-tier: 4
 version: 1.0.0
 description: |
-  Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION, update CHANGELOG, commit, push, create PR. Use when asked to "ship", "deploy", "push to main", "create a PR", or "merge and push".
-  Proactively suggest when the user says code is ready or asks about deploying.
+  Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION,
+  update CHANGELOG, commit, push, create PR. Use when asked to "ship", "deploy",
+  "push to main", "create a PR", or "merge and push".
+  Proactively suggest when the user says code is ready or asks about deploying. (gstack)
 allowed-tools:
   - Bash
   - Read
@@ -27,7 +29,7 @@ _UPD=$(~/.claude/skills/gstack/bin/gstack-update-check 2>/dev/null || .claude/sk
 mkdir -p ~/.gstack/sessions
 touch ~/.gstack/sessions/"$PPID"
 _SESSIONS=$(find ~/.gstack/sessions -mmin -120 -type f 2>/dev/null | wc -l | tr -d ' ')
-find ~/.gstack/sessions -mmin +120 -type f -delete 2>/dev/null || true
+find ~/.gstack/sessions -mmin +120 -type f -exec rm {} + 2>/dev/null || true
 _PROACTIVE=$(~/.claude/skills/gstack/bin/gstack-config get proactive 2>/dev/null || echo "true")
 _PROACTIVE_PROMPTED=$([ -f ~/.gstack/.proactive-prompted ] && echo "yes" || echo "no")
 _BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
@@ -1704,9 +1706,10 @@ already knows. A good test: would this insight save time in a future session? If
 
 2. **Auto-decide the bump level based on the diff:**
    - Count lines changed (`git diff origin/<base>...HEAD --stat | tail -1`)
+   - Check for feature signals: new route/page files (e.g. `app/*/page.tsx`, `pages/*.ts`), new DB migration/schema files, new test files alongside new source files, or branch name starting with `feat/`
    - **MICRO** (4th digit): < 50 lines changed, trivial tweaks, typos, config
-   - **PATCH** (3rd digit): 50+ lines changed, bug fixes, small-medium features
-   - **MINOR** (2nd digit): **ASK the user** — only for major features or significant architectural changes
+   - **PATCH** (3rd digit): 50+ lines changed, no feature signals detected
+   - **MINOR** (2nd digit): **ASK the user** if ANY feature signal is detected, OR 500+ lines changed, OR new modules/packages added
    - **MAJOR** (1st digit): **ASK the user** — only for milestones or breaking changes
 
 3. Compute the new version:

@@ -7,7 +7,7 @@ description: |
   diff, updates README/ARCHITECTURE/CONTRIBUTING/CLAUDE.md to match what shipped,
   polishes CHANGELOG voice, cleans up TODOS, and optionally bumps VERSION. Use when
   asked to "update the docs", "sync documentation", or "post-ship docs".
-  Proactively suggest after a PR is merged or code is shipped.
+  Proactively suggest after a PR is merged or code is shipped. (gstack)
 allowed-tools:
   - Bash
   - Read
@@ -28,7 +28,7 @@ _UPD=$(~/.claude/skills/gstack/bin/gstack-update-check 2>/dev/null || .claude/sk
 mkdir -p ~/.gstack/sessions
 touch ~/.gstack/sessions/"$PPID"
 _SESSIONS=$(find ~/.gstack/sessions -mmin -120 -type f 2>/dev/null | wc -l | tr -d ' ')
-find ~/.gstack/sessions -mmin +120 -type f -delete 2>/dev/null || true
+find ~/.gstack/sessions -mmin +120 -type f -exec rm {} + 2>/dev/null || true
 _PROACTIVE=$(~/.claude/skills/gstack/bin/gstack-config get proactive 2>/dev/null || echo "true")
 _PROACTIVE_PROMPTED=$([ -f ~/.gstack/.proactive-prompted ] && echo "yes" || echo "no")
 _BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")

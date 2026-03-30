@@ -6,7 +6,7 @@ description: |
   Pre-landing PR review. Analyzes diff against the base branch for SQL safety, LLM trust
   boundary violations, conditional side effects, and other structural issues. Use when
   asked to "review this PR", "code review", "pre-landing review", or "check my diff".
-  Proactively suggest when the user is about to merge or land code changes.
+  Proactively suggest when the user is about to merge or land code changes. (gstack)
 allowed-tools:
   - Bash
   - Read
@@ -29,7 +29,7 @@ _UPD=$(~/.claude/skills/gstack/bin/gstack-update-check 2>/dev/null || .claude/sk
 mkdir -p ~/.gstack/sessions
 touch ~/.gstack/sessions/"$PPID"
 _SESSIONS=$(find ~/.gstack/sessions -mmin -120 -type f 2>/dev/null | wc -l | tr -d ' ')
-find ~/.gstack/sessions -mmin +120 -type f -delete 2>/dev/null || true
+find ~/.gstack/sessions -mmin +120 -type f -exec rm {} + 2>/dev/null || true
 _PROACTIVE=$(~/.claude/skills/gstack/bin/gstack-config get proactive 2>/dev/null || echo "true")
 _PROACTIVE_PROMPTED=$([ -f ~/.gstack/.proactive-prompted ] && echo "yes" || echo "no")
 _BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")

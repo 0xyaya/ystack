@@ -6,7 +6,7 @@ description: |
   Import cookies from your real Chromium browser into the headless browse session.
   Opens an interactive picker UI where you select which cookie domains to import.
   Use before QA testing authenticated pages. Use when asked to "import cookies",
-  "login to the site", or "authenticate the browser".
+  "login to the site", or "authenticate the browser". (gstack)
 allowed-tools:
   - Bash
   - Read
@@ -23,7 +23,7 @@ _UPD=$(~/.claude/skills/gstack/bin/gstack-update-check 2>/dev/null || .claude/sk
 mkdir -p ~/.gstack/sessions
 touch ~/.gstack/sessions/"$PPID"
 _SESSIONS=$(find ~/.gstack/sessions -mmin -120 -type f 2>/dev/null | wc -l | tr -d ' ')
-find ~/.gstack/sessions -mmin +120 -type f -delete 2>/dev/null || true
+find ~/.gstack/sessions -mmin +120 -type f -exec rm {} + 2>/dev/null || true
 _PROACTIVE=$(~/.claude/skills/gstack/bin/gstack-config get proactive 2>/dev/null || echo "true")
 _PROACTIVE_PROMPTED=$([ -f ~/.gstack/.proactive-prompted ] && echo "yes" || echo "no")
 _BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")

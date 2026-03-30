@@ -10,7 +10,7 @@ description: |
   Use when asked to "auto review", "autoplan", "run all reviews", "review this plan
   automatically", or "make the decisions for me".
   Proactively suggest when the user has a plan file and wants to run the full review
-  gauntlet without answering 15-30 intermediate questions.
+  gauntlet without answering 15-30 intermediate questions. (gstack)
 benefits-from: [office-hours]
 allowed-tools:
   - Bash
@@ -33,7 +33,7 @@ _UPD=$(~/.claude/skills/gstack/bin/gstack-update-check 2>/dev/null || .claude/sk
 mkdir -p ~/.gstack/sessions
 touch ~/.gstack/sessions/"$PPID"
 _SESSIONS=$(find ~/.gstack/sessions -mmin -120 -type f 2>/dev/null | wc -l | tr -d ' ')
-find ~/.gstack/sessions -mmin +120 -type f -delete 2>/dev/null || true
+find ~/.gstack/sessions -mmin +120 -type f -exec rm {} + 2>/dev/null || true
 _PROACTIVE=$(~/.claude/skills/gstack/bin/gstack-config get proactive 2>/dev/null || echo "true")
 _PROACTIVE_PROMPTED=$([ -f ~/.gstack/.proactive-prompted ] && echo "yes" || echo "no")
 _BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
