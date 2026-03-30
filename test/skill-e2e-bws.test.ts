@@ -20,6 +20,7 @@ let tmpDir: string;
 describeIfSelected('Skill E2E tests', [
   'browse-basic', 'browse-snapshot', 'skillmd-setup-discovery',
   'skillmd-no-local-binary', 'skillmd-outside-git', 'session-awareness',
+  'operational-learning',
 ], () => {
   beforeAll(() => {
     testServer = startTestServer();
@@ -176,6 +177,98 @@ Report the exact output — either "READY: <path>" or "NEEDS_SETUP".`,
     // Clean up
     try { fs.rmSync(nonGitDir, { recursive: true, force: true }); } catch {}
   }, 60_000);
+
+  testConcurrentIfSelected('operational-learning', async () => {
+    const opDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-oplearn-'));
+    const gstackHome = path.join(opDir, '.gstack-home');
+
+    // Init git repo
+    const run = (cmd: string, args: string[]) =>
+      spawnSync(cmd, args, { cwd: opDir, stdio: 'pipe', timeout: 5000 });
+    run('git', ['init', '-b', 'main']);
+    run('git', ['config', 'user.email', 'test@test.com']);
+    run('git', ['config', 'user.name', 'Test']);
+    fs.writeFileSync(path.join(opDir, 'app.ts'), 'console.log("hello");\n');
+    run('git', ['add', '.']);
+    run('git', ['commit', '-m', 'initial']);
+
+    // Copy bin scripts
+    const binDir = path.join(opDir, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    for (const script of ['gstack-learnings-log', 'gstack-slug']) {
+      fs.copyFileSync(path.join(ROOT, 'bin', script), path.join(binDir, script));
+      fs.chmodSync(path.join(binDir, script), 0o755);
+    }
+
+    // gstack-learnings-log will create the project dir automatically via gstack-slug
+
+    const result = await runSkillTest({
+      prompt: `You just ran \`npm test\` in this project and it failed with this error:
+
+Error: --experimental-vm-modules flag is required for ESM support in this project.
+Run: npm test --experimental-vm-modules
+
+Per the Operational Self-Improvement instructions below, log an operational learning about this failure.
+
+## Operational Self-Improvement
+
+Before completing, reflect on this session:
+- Did any commands fail unexpectedly?
+
+If yes, log an operational learning for future sessions:
+
+\`\`\`bash
+GSTACK_HOME="${gstackHome}" ${binDir}/gstack-learnings-log '{"skill":"qa","type":"operational","key":"SHORT_KEY","insight":"DESCRIPTION","confidence":N,"source":"observed"}'
+\`\`\`
+
+Replace SHORT_KEY with a kebab-case key like "esm-vm-modules-flag".
+Replace DESCRIPTION with a one-sentence description of what you learned.
+Replace N with a confidence score 1-10.
+
+Log the operational learning now. Then say what you logged.`,
+      workingDirectory: opDir,
+      maxTurns: 5,
+      timeout: 30_000,
+      testName: 'operational-learning',
+      runId,
+    });
+
+    logCost('operational learning', result);
+
+    const exitOk = ['success', 'error_max_turns'].includes(result.exitReason);
+
+    // Check if learnings file was created with an operational entry
+    // The slug is derived from the git repo (dirname), so search all project dirs
+    let hasOperational = false;
+    const projectsDir = path.join(gstackHome, 'projects');
+    if (fs.existsSync(projectsDir)) {
+      for (const slug of fs.readdirSync(projectsDir)) {
+        const lPath = path.join(projectsDir, slug, 'learnings.jsonl');
+        if (fs.existsSync(lPath)) {
+          const jsonl = fs.readFileSync(lPath, 'utf-8').trim();
+          if (jsonl) {
+            const entries = jsonl.split('\n').map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+            const opEntry = entries.find(e => e.type === 'operational');
+            if (opEntry) {
+              hasOperational = true;
+              console.log(`Operational learning logged: key="${opEntry.key}" insight="${opEntry.insight}" (slug: ${slug})`);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    recordE2E(evalCollector, 'operational learning', 'Skill E2E tests', result, {
+      passed: exitOk && hasOperational,
+    });
+
+    expect(exitOk).toBe(true);
+    expect(hasOperational).toBe(true);
+
+    // Clean up
+    try { fs.rmSync(opDir, { recursive: true, force: true }); } catch {}
+  }, 90_000);
 
   testConcurrentIfSelected('session-awareness', async () => {
     const sessionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-session-'));
