@@ -1,31 +1,69 @@
 # Changelog
 
-## [0.13.9.0] - 2026-03-29 — Sidebar CSS Inspector + Per-Tab Agents
+## [0.13.11.0] - 2026-03-30 — Sidebar CSS Inspector + Per-Tab Agents
 
-The sidebar is now a visual design tool. Pick any element on the page and see the full CSS rule cascade, box model, and computed styles right in the Side Panel. Edit styles live and see changes instantly. Each browser tab gets its own independent agent, so you can work on multiple pages simultaneously without cross-talk.
+The sidebar is now a visual design tool. Pick any element on the page and see the full CSS rule cascade, box model, and computed styles right in the Side Panel. Edit styles live and see changes instantly. Each browser tab gets its own independent agent, so you can work on multiple pages simultaneously without cross-talk. Cleanup is LLM-powered... the agent snapshots the page, understands it semantically, and removes the junk while keeping the site's identity.
 
 ### Added
 
 - **CSS Inspector in the sidebar.** Click "Pick Element", hover over anything, click it, and the sidebar shows the full CSS rule cascade with specificity badges, source file:line, box model visualization (gstack palette colors), and computed styles. Like Chrome DevTools, but inside the sidebar.
 - **Live style editing.** `$B style .selector property value` modifies CSS rules in real time via CDP. Changes show instantly on the page. Undo with `$B style --undo`.
-- **Per-tab agents.** Each browser tab gets its own Claude agent process. Switch tabs in the browser and the sidebar swaps to that tab's chat history. Ask questions about different pages in parallel without agents fighting over which tab is active.
-- **Tab tracking.** User-created tabs (Cmd+T, right-click "Open in new tab") are automatically tracked. The sidebar tab bar updates in real time. Click a tab in the sidebar to switch the browser. Close a tab and it disappears from the bar.
-- **Page cleanup.** `$B cleanup --all` removes ads, cookie banners, sticky headers, and social widgets for clean screenshots.
+- **Per-tab agents.** Each browser tab gets its own Claude agent process via `BROWSE_TAB` env var. Switch tabs in the browser and the sidebar swaps to that tab's chat history. Ask questions about different pages in parallel without agents fighting over which tab is active.
+- **Tab tracking.** User-created tabs (Cmd+T, right-click "Open in new tab") are automatically tracked via `context.on('page')`. The sidebar tab bar updates in real time. Click a tab in the sidebar to switch the browser. Close a tab and it disappears.
+- **LLM-powered page cleanup.** The cleanup button sends a prompt to the sidebar agent (which IS an LLM). The agent runs a deterministic first pass, snapshots the page, analyzes what's left, and removes clutter intelligently while preserving site branding. Works on any site without brittle CSS selectors.
 - **Pretty screenshots.** `$B prettyscreenshot --cleanup --scroll-to ".pricing" ~/Desktop/hero.png` combines cleanup, scroll positioning, and screenshot in one command.
 - **Stop button.** A red stop button appears in the sidebar when an agent is working. Click it to cancel the current task.
 - **CSP fallback for inspector.** Sites with strict Content Security Policy (like SF Chronicle) now get a basic picker via the always-loaded content script. You see computed styles, box model, and same-origin CSS rules. Full CDP mode on sites that allow it.
-- **Cleanup button in sidebar.** One click removes ads, cookie banners, sticky headers, and social widgets. Spinner while it works, notification when done.
-- **Screenshot button in sidebar.** One click captures a screenshot. Shows the saved file path in the chat.
+- **Cleanup + Screenshot buttons in chat toolbar.** Not hidden in debug... right there in the chat. Disabled when disconnected so you don't get error spam.
 
 ### Fixed
 
 - **Inspector message allowlist.** The background.js allowlist was missing all inspector message types, silently rejecting them. The inspector was broken for all pages, not just CSP-restricted ones. (Found by Codex review.)
+- **Sticky nav preservation.** Cleanup no longer removes the site's top nav bar. Sorts sticky elements by position and preserves the first full-width element near the top.
 
 ### Changed
 
 - **Sidebar banner** now says "Browser co-pilot" instead of the old mode-specific text.
 - **Input placeholder** is "Ask about this page..." (more inviting than the old placeholder).
 - **System prompt** includes prompt injection defense and allowed-commands whitelist from the security audit.
+
+## [0.13.10.0] - 2026-03-29 — Office Hours Gets a Reading List
+
+Repeat /office-hours users now get fresh, curated resources every session instead of the same YC closing. 34 hand-picked videos and essays from Garry Tan, Lightcone Podcast, YC Startup School, and Paul Graham, contextually matched to what came up during the session. The system remembers what it already showed you, so you never see the same recommendation twice.
+
+### Added
+
+- **Rotating founder resources in /office-hours closing.** 34 curated resources across 5 categories (Garry Tan videos, YC Backstory, Lightcone Podcast, YC Startup School, Paul Graham essays). Claude picks 2-3 per session based on session context, not randomly.
+- **Resource dedup log.** Tracks which resources were shown in `~/.gstack/projects/$SLUG/resources-shown.jsonl` so repeat users always see fresh content.
+- **Resource selection analytics.** Logs which resources get picked to `skill-usage.jsonl` so you can see patterns over time.
+- **Browser-open offer.** After showing resources, offers to open them in your browser so you can check them out later.
+
+### Fixed
+
+- **Build script chmod safety net.** `bun build --compile` output now gets `chmod +x` explicitly, preventing "permission denied" errors when binaries lose execute permission during workspace cloning or file transfer.
+
+## [0.13.9.0] - 2026-03-29 — Composable Skills
+
+Skills can now load other skills inline. Write `{{INVOKE_SKILL:office-hours}}` in a template and the generator emits the right "read file, skip preamble, follow instructions" prose automatically. Handles host-aware paths and customizable skip lists.
+
+### Added
+
+- **`{{INVOKE_SKILL:skill-name}}` resolver.** Composable skill loading as a first-class resolver. Emits host-aware prose that tells Claude or Codex to read another skill's SKILL.md and follow it inline, skipping preamble sections. Supports optional `skip=` parameter for additional sections to skip.
+- **Parameterized resolver support.** The placeholder regex now handles `{{NAME:arg1:arg2}}`, enabling resolvers that take arguments at generation time. Fully backward compatible with existing `{{NAME}}` patterns.
+- **`{{CHANGELOG_WORKFLOW}}` resolver.** Changelog generation logic extracted from /ship into a reusable resolver. Includes voice guidance ("lead with what the user can now do") inline.
+- **Frontmatter `name:` for skill registration.** Setup script and gen-skill-docs now read `name:` from SKILL.md frontmatter for symlink naming. Enables directory names that differ from invocation names (e.g., `run-tests/` directory registered as `/test`).
+- **Proactive skill routing.** Skills now ask once to add routing rules to your project's CLAUDE.md. This makes Claude invoke the right skill automatically instead of answering directly. Your choice is remembered in `~/.gstack/config.yaml`.
+- **Annotated config file.** `~/.gstack/config.yaml` now gets a documented header on first creation explaining every setting. Edit it anytime.
+
+### Changed
+
+- **BENEFITS_FROM now delegates to INVOKE_SKILL.** Eliminated duplicated skip-list logic. The prerequisite offer wrapper stays in BENEFITS_FROM, but the actual "read and follow" instructions come from INVOKE_SKILL.
+- **/plan-ceo-review mid-session fallback uses INVOKE_SKILL.** The "user can't articulate the problem, offer /office-hours" path now uses the composable resolver instead of inline prose.
+- **Stronger routing language.** office-hours, investigate, and ship descriptions now say "Proactively invoke" instead of "Proactively suggest" for more reliable automatic skill invocation.
+
+### Fixed
+
+- **Config grep anchored to line start.** Commented header lines no longer shadow real config values.
 
 ## [0.13.8.0] - 2026-03-29 — Security Audit Round 2
 
