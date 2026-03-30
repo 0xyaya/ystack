@@ -221,6 +221,13 @@ body::after {
   color: #000;
   border-bottom-right-radius: var(--radius-sm);
 }
+.chat-notification {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-meta);
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+}
 .chat-bubble.assistant {
   align-self: flex-start;
   background: var(--bg-surface);
@@ -806,6 +813,56 @@ footer {
 .inspector-pick-icon {
   font-size: 14px;
   line-height: 1;
+}
+
+/* ─── Action Buttons (Cleanup, Screenshot) ─────────────────── */
+
+.inspector-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--zinc-600);
+  border-radius: var(--radius-sm);
+  color: var(--text-label);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms;
+  flex-shrink: 0;
+}
+
+.inspector-action-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-body);
+  border-color: var(--zinc-400);
+}
+
+.inspector-action-btn:active {
+  transform: scale(0.95);
+}
+
+.inspector-action-btn.loading {
+  pointer-events: none;
+  opacity: 0.5;
+  position: relative;
+}
+
+.inspector-action-btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--zinc-600);
+  border-top-color: var(--amber-400);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .inspector-selected {
