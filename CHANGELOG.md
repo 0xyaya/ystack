@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.15.1.0] - 2026-04-01 — GStack Browser: AI-Controlled Chromium
+## [0.15.2.0] - 2026-04-01 — GStack Browser: AI-Controlled Chromium
 
 GStack Browser is an AI-controlled Chromium with the sidebar baked in, anti-bot stealth, and custom branding. Sites like Google and NYTimes work without captchas. The menu bar says "GStack Browser" instead of "Chrome for Testing." Run `/open-gstack-browser` from Claude Code and you're in.
 
@@ -19,6 +19,15 @@ GStack Browser is an AI-controlled Chromium with the sidebar baked in, anti-bot 
 
 - **Extension auth bootstrap.** `background.js` now reads token from `/health` instead of `chrome.runtime.getURL('.auth.json')`. Simpler, works everywhere.
 - **Renamed `/connect-chrome` to `/open-gstack-browser`.** All references updated across README, docs, extension UI. Symlink preserved for backwards compatibility.
+
+## [0.15.1.0] - 2026-04-01 — Design Without Shotgun
+
+You can now run `/design-html` without having to run `/design-shotgun` first. The skill detects what design context exists (CEO plans, design review artifacts, approved mockups) and asks how you want to proceed. Start from a plan, a description, or a provided PNG, not just an approved mockup.
+
+### Changed
+
+- **`/design-html` works from any starting point.** Three routing modes: (A) approved mockup from /design-shotgun, (B) CEO plan and/or design variants without formal approval, (C) clean slate with just a description. Each mode asks the right questions and proceeds accordingly.
+- **AskUserQuestion for missing context.** Instead of blocking with "no approved design found," the skill now offers choices: run the planning skills first, provide a PNG, or just describe what you want and design live.
 
 ## [0.15.0.0] - 2026-04-01 — Session Intelligence
 
