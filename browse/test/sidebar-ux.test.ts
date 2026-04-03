@@ -1213,10 +1213,11 @@ describe('welcome page', () => {
     expect(welcomeSrc).toContain('sidebar-prompt');
   });
 
-  test('welcome page does NOT have a misaligned arrow', () => {
-    // Arrow was removed because it can never align with browser chrome
+  test('welcome page points RIGHT toward sidebar (not UP at toolbar)', () => {
+    // Up arrow can never align with browser chrome. Right arrow always
+    // points toward the sidebar area regardless of window size.
     expect(welcomeSrc).not.toContain('arrow-up');
-    expect(welcomeSrc).not.toContain('↑');
+    expect(welcomeSrc).toContain('arrow-right');
   });
 
   test('welcome page has left-aligned text (no center-align on headings)', () => {
