@@ -1348,6 +1348,30 @@ describe('sidebar auth race prevention', () => {
   });
 });
 
+describe('startup health check fast-retry', () => {
+  const bgSrc = fs.readFileSync(path.join(ROOT, '..', 'extension', 'background.js'), 'utf-8');
+
+  test('initial health check retries every 1s (not 10s)', () => {
+    // The server may not be listening when the extension starts because
+    // Chromium launches before Bun.serve(). A 10s gap means the user
+    // stares at "Connecting..." for 10 seconds. 1s retry fixes this.
+    expect(bgSrc).toContain('startupAttempts');
+    expect(bgSrc).toContain('setInterval(async ()');
+    // Fast retry uses 1000ms, not the 10000ms slow poll
+    expect(bgSrc).toContain('}, 1000);');
+  });
+
+  test('startup retry stops after connection or max attempts', () => {
+    expect(bgSrc).toContain('isConnected || startupAttempts >= 15');
+    expect(bgSrc).toContain('clearInterval(startupCheck)');
+  });
+
+  test('slow 10s polling only starts after startup phase completes', () => {
+    expect(bgSrc).toContain('if (!healthInterval)');
+    expect(bgSrc).toContain('setInterval(checkHealth, 10000)');
+  });
+});
+
 describe('sidebar debug visibility when stuck', () => {
   const spSrc = fs.readFileSync(path.join(ROOT, '..', 'extension', 'sidepanel.js'), 'utf-8');
 

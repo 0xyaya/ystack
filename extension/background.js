@@ -454,10 +454,25 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
 // ─── Startup ────────────────────────────────────────────────────
 
-// Load auth token BEFORE first health poll (token no longer in /health response)
+// Fast-retry health check on startup. The server may not be listening yet
+// (Chromium launches before Bun.serve starts). Retry every 1s for the
+// first 15 seconds, then switch to 10s polling.
 loadAuthToken().then(() => {
   loadPort().then(() => {
-    checkHealth();
-    healthInterval = setInterval(checkHealth, 10000);
+    let startupAttempts = 0;
+    const startupCheck = setInterval(async () => {
+      startupAttempts++;
+      await checkHealth();
+      if (isConnected || startupAttempts >= 15) {
+        clearInterval(startupCheck);
+        // Switch to slow polling now that we're connected (or gave up)
+        if (!healthInterval) {
+          healthInterval = setInterval(checkHealth, 10000);
+        }
+        if (!isConnected) {
+          console.log('[gstack] Startup health checks failed after 15 attempts, falling back to 10s polling');
+        }
+      }
+    }, 1000);
   });
 });
