@@ -870,6 +870,33 @@ async function handleCommand(body: any, tokenInfo?: TokenInfo | null): Promise<R
     }
   }
 
+  // ─── Tab ownership check (for scoped tokens) ──────────────
+  if (tokenInfo && tokenInfo.clientId !== 'root' && WRITE_COMMANDS.has(command)) {
+    const targetTab = tabId ?? browserManager.getActiveTabId();
+    if (!browserManager.checkTabAccess(targetTab, tokenInfo.clientId, true)) {
+      return new Response(JSON.stringify({
+        error: 'Tab not owned by your agent. Use newtab to create your own tab.',
+        hint: `Tab ${targetTab} is owned by ${browserManager.getTabOwner(targetTab) || 'root'}. Your agent: ${tokenInfo.clientId}.`,
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // ─── newtab with ownership for scoped tokens ──────────────
+  if (command === 'newtab' && tokenInfo && tokenInfo.clientId !== 'root') {
+    const newId = await browserManager.newTab(args[0] || undefined, tokenInfo.clientId);
+    return new Response(JSON.stringify({
+      tabId: newId,
+      owner: tokenInfo.clientId,
+      hint: 'Include "tabId": ' + newId + ' in subsequent commands to target this tab.',
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   // Block mutation commands while watching (read-only observation mode)
   if (browserManager.isWatching() && WRITE_COMMANDS.has(command)) {
     return new Response(JSON.stringify({
@@ -889,6 +916,7 @@ async function handleCommand(body: any, tokenInfo?: TokenInfo | null): Promise<R
     url: browserManager.getCurrentUrl(),
     tabs: browserManager.getTabCount(),
     mode: browserManager.getConnectionMode(),
+    clientId: tokenInfo?.clientId,
   });
 
   try {
@@ -946,6 +974,7 @@ async function handleCommand(body: any, tokenInfo?: TokenInfo | null): Promise<R
       result: result,
       tabs: browserManager.getTabCount(),
       mode: browserManager.getConnectionMode(),
+      clientId: tokenInfo?.clientId,
     });
 
     browserManager.resetFailures();
@@ -978,6 +1007,7 @@ async function handleCommand(body: any, tokenInfo?: TokenInfo | null): Promise<R
       error: err.message,
       tabs: browserManager.getTabCount(),
       mode: browserManager.getConnectionMode(),
+      clientId: tokenInfo?.clientId,
     });
 
     browserManager.incrementFailures();
@@ -1295,6 +1325,38 @@ async function start() {
         return new Response(JSON.stringify({ agents }), {
           status: 200, headers: { 'Content-Type': 'application/json' },
         });
+      }
+
+      // ─── /pair — create setup key for pair-agent ceremony (root-only) ───
+      if (url.pathname === '/pair' && req.method === 'POST') {
+        if (!isRootRequest(req)) {
+          return new Response(JSON.stringify({ error: 'Root token required' }), {
+            status: 403, headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        try {
+          const pairBody = await req.json() as any;
+          const scopes = pairBody.admin
+            ? ['read', 'write', 'admin', 'meta'] as const
+            : (pairBody.scopes || ['read', 'write']) as const;
+          const setupKey = createSetupKey({
+            clientId: pairBody.clientId,
+            scopes: [...scopes],
+            domains: pairBody.domains,
+            rateLimit: pairBody.rateLimit,
+          });
+          return new Response(JSON.stringify({
+            setup_key: setupKey.token,
+            expires_at: setupKey.expiresAt,
+            scopes: setupKey.scopes,
+            tunnel_url: tunnelActive ? tunnelUrl : null,
+            server_url: `http://127.0.0.1:${server?.port || 0}`,
+          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        } catch {
+          return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+            status: 400, headers: { 'Content-Type': 'application/json' },
+          });
+        }
       }
 
       // Refs endpoint — auth required, does NOT reset idle timer
