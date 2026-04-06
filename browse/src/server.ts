@@ -572,7 +572,7 @@ function spawnClaude(userMessage: string, extensionUrl?: string | null, forTabId
   // Agent status transitions happen when we receive agent_done/agent_error events.
 }
 
-function killAgent(): void {
+function killAgent(targetTabId?: number | null): void {
   if (agentProcess) {
     try { agentProcess.kill('SIGTERM'); } catch (err: any) {
       console.warn('[browse] Failed to SIGTERM agent:', err.message);
@@ -581,17 +581,18 @@ function killAgent(): void {
       console.warn('[browse] Failed to SIGKILL agent:', err.message);
     } }, 3000);
   }
+  // Signal the sidebar-agent worker to cancel via a per-tab cancel file.
+  // Using per-tab files prevents race conditions where one agent's cancel
+  // signal is consumed by a different tab's agent in concurrent mode.
+  // When targetTabId is provided, only that tab's agent is cancelled.
+  const cancelDir = path.join(process.env.HOME || '/tmp', '.gstack');
+  const tabId = targetTabId ?? agentTabId ?? 0;
+  const cancelFile = path.join(cancelDir, `sidebar-agent-cancel-${tabId}`);
+  try { fs.writeFileSync(cancelFile, Date.now().toString()); } catch {}
   agentProcess = null;
   agentStartTime = null;
   currentMessage = null;
   agentStatus = 'idle';
-
-  // Signal sidebar-agent.ts to kill its active claude subprocess.
-  // sidebar-agent runs in a separate non-compiled Bun process (posix_spawn
-  // limitation). It polls the kill-signal file and terminates on any write.
-  const agentQueue = process.env.SIDEBAR_QUEUE_PATH || path.join(process.env.HOME || '/tmp', '.gstack', 'sidebar-agent-queue.jsonl');
-  const killFile = path.join(path.dirname(agentQueue), 'sidebar-agent-kill');
-  try { fs.writeFileSync(killFile, String(Date.now())); } catch {}
 }
 
 // Agent health check — detect hung processes
@@ -1371,7 +1372,8 @@ async function start() {
         if (!validateAuth(req)) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
-        killAgent();
+        const killBody = await req.json().catch(() => ({}));
+        killAgent(killBody.tabId ?? null);
         addChatEntry({ ts: new Date().toISOString(), role: 'agent', type: 'agent_error', error: 'Killed by user' });
         // Process next in queue
         if (messageQueue.length > 0) {
@@ -1386,7 +1388,8 @@ async function start() {
         if (!validateAuth(req)) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
-        killAgent();
+        const stopBody = await req.json().catch(() => ({}));
+        killAgent(stopBody.tabId ?? null);
         addChatEntry({ ts: new Date().toISOString(), role: 'agent', type: 'agent_error', error: 'Stopped by user' });
         return new Response(JSON.stringify({ ok: true, queuedMessages: messageQueue.length }), {
           status: 200, headers: { 'Content-Type': 'application/json' },
