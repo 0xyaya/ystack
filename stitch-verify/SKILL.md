@@ -1,5 +1,6 @@
 ---
 name: stitch-verify
+preamble-tier: 4
 version: 0.1.0
 description: |
   Verify that a web app screen matches its Google Stitch design reference.
@@ -23,6 +24,41 @@ allowed-tools:
   - mcp__stitch__list_screens
   - mcp__stitch__get_screen
 ---
+
+## Preamble (run first)
+
+```bash
+mkdir -p ~/.gstack/sessions
+touch ~/.gstack/sessions/"$PPID"
+_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+echo "BRANCH: $_BRANCH"
+_TEL=$(~/.claude/skills/gstack/bin/gstack-config get telemetry 2>/dev/null || true)
+_TEL_START=$(date +%s)
+_SESSION_ID="$$-$(date +%s)"
+mkdir -p ~/.gstack/analytics
+if [ "$_TEL" != "off" ]; then
+echo '{"skill":"stitch-verify","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
+fi
+eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || true
+_LEARN_FILE="${GSTACK_HOME:-$HOME/.gstack}/projects/${SLUG:-unknown}/learnings.jsonl"
+if [ -f "$_LEARN_FILE" ]; then
+  _LEARN_COUNT=$(wc -l < "$_LEARN_FILE" 2>/dev/null | tr -d ' ')
+  echo "LEARNINGS: $_LEARN_COUNT entries loaded"
+else
+  echo "LEARNINGS: 0"
+fi
+~/.claude/skills/gstack/bin/gstack-timeline-log '{"skill":"stitch-verify","event":"started","branch":"'"$_BRANCH"'","session":"'"$_SESSION_ID"'"}' 2>/dev/null &
+# Setup browse binary
+_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+B=""
+[ -n "$_ROOT" ] && [ -x "$_ROOT/.claude/skills/gstack/browse/dist/browse" ] && B="$_ROOT/.claude/skills/gstack/browse/dist/browse"
+[ -z "$B" ] && B=~/.claude/skills/gstack/browse/dist/browse
+if [ -x "$B" ]; then
+  echo "BROWSE: $B"
+else
+  echo "BROWSE: NEEDS_SETUP — run: cd ~/.claude/skills/gstack/browse && ./setup"
+fi
+```
 
 # /stitch-verify — Design Convergence Loop
 
