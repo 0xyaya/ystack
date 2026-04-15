@@ -338,6 +338,31 @@ For each mismatch `{selector, property, expected, got}`:
 5. **If a new Tailwind token is needed**: Add it to `tailwind.config.js` with the
    project's naming convention (e.g., `ody-` prefix for this project).
 
+## Phase 2.5: Build Check
+
+Before declaring convergence, run the project's build command to catch lint/type errors
+that the dev server doesn't enforce. The dev server only shows warnings — the production
+build treats ESLint errors and type errors as failures.
+
+```bash
+# Detect build command from package.json or CLAUDE.md
+# Common patterns:
+pnpm build        # monorepo root
+pnpm -C apps/web build   # Next.js in monorepo
+npm run build     # standard
+```
+
+**If build fails:**
+- Read the error output
+- Fix each error (common issues: conditional hooks, `<img>` → `next/image`, missing types)
+- Re-run the build
+- Count this as a verification tick
+
+**If build passes:** Continue to Phase 3.
+
+This step is critical. A screen that looks perfect in dev mode but fails the production
+build will break CI and block the PR. Always build before reporting convergence.
+
 ## Phase 3: Report
 
 ### If converged:
