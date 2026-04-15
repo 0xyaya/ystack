@@ -1480,6 +1480,63 @@ After producing the completion checklist:
 
 ---
 
+## Step 3.46: Stitch Design Verification
+
+Automatically verify that UI components match their Google Stitch design reference.
+
+### 1. Check for Stitch reference
+
+Search for a Stitch screen reference in these locations (in order):
+- Plan file: look for `## Design Reference` section with `Stitch screen:` or `Stitch project:` fields
+- CLAUDE.md: look for a `## Design Reference` section
+- `docs/screenshots/stitch-reference.png` exists (indicates a prior Stitch implementation)
+
+Also check if the Stitch MCP tools are available:
+```bash
+# Check if stitch MCP is configured
+grep -q "stitch" .mcp.json 2>/dev/null && echo "STITCH_MCP: available" || echo "STITCH_MCP: unavailable"
+```
+
+**If no Stitch reference found OR MCP unavailable:** Skip with "No Stitch design reference found — skipping design verification."
+
+### 2. Load /stitch-verify inline
+
+Read the stitch-verify skill from disk:
+
+```bash
+cat ${CLAUDE_SKILL_DIR}/../stitch-verify/SKILL.md
+```
+
+**If unreadable:** Skip with "Could not load /stitch-verify — skipping design verification."
+
+### 3. Run verification
+
+Follow the `/stitch-verify` workflow with these modifications:
+- **Skip the preamble** (already handled by /ship)
+- **Use the dev server already detected by /ship** (from Step 3.47's server check)
+- **Max 3 ticks** (not 5 — /ship should be fast; use standalone /stitch-verify for deeper convergence)
+- **Report-and-fix mode**: fix mismatches found, then re-verify
+
+### 4. Gate logic
+
+- **CONVERGED (all checks pass):** Continue silently. "Stitch design verification: PASS ({N} CSS properties verified)."
+- **NOT CONVERGED (mismatches remain):** Use AskUserQuestion:
+  - Show remaining mismatches with screenshot evidence
+  - RECOMMENDATION: Choose A for visual-critical screens (login, onboarding). Choose B for internal screens.
+  - Options:
+    A) Fix remaining mismatches before shipping (run standalone /stitch-verify for deeper convergence)
+    B) Ship anyway — close enough (will note gaps in PR)
+    C) Skip — design will be refined in a follow-up PR
+- **No Stitch reference / no MCP / unreadable skill:** Skip (non-blocking).
+
+### 5. Include in PR body
+
+Add a `## Stitch Design Verification` section to the PR body (Step 8):
+- If verification ran: convergence status, tick count, CSS properties checked, screenshots
+- If skipped: reason for skipping
+
+---
+
 ## Step 3.47: Plan Verification
 
 Automatically verify the plan's testing/verification steps using the `/qa-only` skill.
